@@ -154,6 +154,45 @@ div.stButton > button:hover {
     background: rgba(255, 255, 255, 0.15) !important;
 }
 
+/* --- サイドバー全体の背景をダークに強制 --- */
+section[data-testid="stSidebar"] {
+    background-color: #0f172a !important; /* メインと同じダークネイビー */
+}
+
+/* サイドバー内のテキストを白に強制 */
+section[data-testid="stSidebar"] div, 
+section[data-testid="stSidebar"] span, 
+section[data-testid="stSidebar"] p, 
+section[data-testid="stSidebar"] h1, 
+section[data-testid="stSidebar"] h2, 
+section[data-testid="stSidebar"] h3 {
+    color: #ffffff !important;
+}
+
+/* --- 履歴ボタン（カード）のハッキリとしたデザイン --- */
+section[data-testid="stSidebar"] button {
+    background-color: rgba(255, 255, 255, 0.1) !important; /* 半透明のダークパネル */
+    border: 1px solid rgba(255, 255, 255, 0.3) !important; /* くっきりした枠線 */
+    border-radius: 10px !important;
+    padding: 10px !important;
+    margin-bottom: 10px !important;
+}
+
+/* 履歴ボタン内のテキストを絶対に読めるようにする */
+section[data-testid="stSidebar"] button p {
+    color: #ffffff !important;
+    font-weight: bold !important;
+    font-size: 1rem !important;
+    text-shadow: 1px 1px 3px rgba(0,0,0,0.8) !important; /* 文字に黒い影をつけて読みやすく */
+}
+
+/* ホバー（タップ）時にかっこよく光る */
+section[data-testid="stSidebar"] button:hover {
+    border-color: #0ea5e9 !important;
+    box-shadow: 0 0 12px rgba(14, 165, 233, 0.6) !important;
+    background-color: rgba(14, 165, 233, 0.2) !important;
+}
+
 /* コンテンツエリア用（マークダウンを綺麗に見せる） */
 .css-1n76uvr { line-height: 1.8; }
 </style>
