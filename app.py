@@ -5,7 +5,6 @@ import sqlite3
 import google.generativeai as genai
 from datetime import datetime
 import streamlit as st
-from fpdf import FPDF
 
 # --- UIカスタマイズ設定 ---
 st.set_page_config(page_title="AI自動コンテンツ錬成システム", layout="centered", page_icon="✨")
@@ -15,8 +14,10 @@ if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
 if 'login_time' not in st.session_state:
     st.session_state.login_time = 0
-if 'preview_mode' not in st.session_state:
-    st.session_state.preview_mode = False
+if 'preview_product' not in st.session_state:
+    st.session_state.preview_product = False
+if 'preview_manual' not in st.session_state:
+    st.session_state.preview_manual = False
 if 'display_product' not in st.session_state:
     st.session_state.display_product = None
 if 'display_manual' not in st.session_state:
@@ -25,7 +26,7 @@ if 'display_keyword' not in st.session_state:
     st.session_state.display_keyword = None
 
 # --- CSS切り替え（プレビュー or 通常） ---
-if st.session_state.preview_mode:
+if st.session_state.preview_product or st.session_state.preview_manual:
     st.markdown("""
 <style>
 /* 印刷プレビュー用CSS（UI消去・白背景・黒文字フォーカス） */
@@ -36,11 +37,12 @@ if st.session_state.preview_mode:
     display: none !important;
 }
 .block-container {
-    padding: 1rem 1rem !important;
-    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 auto !important;
+    max-width: 800px !important;
 }
 /* すべてのテキスト要素を強制的に黒無地に */
-h1, h2, h3, h4, h5, h6, p, div, span {
+h1, h2, h3, h4, h5, h6, p, div, span, li, ul, ol, strong, em, b, i {
     background: none !important;
     -webkit-background-clip: unset !important;
     -webkit-text-fill-color: #000000 !important;
@@ -53,7 +55,7 @@ h1, h2, h3, h4, h5, h6, p, div, span {
     -webkit-backdrop-filter: none !important;
     border: none !important;
     box-shadow: none !important;
-    padding: 0 !important;
+    padding: 1rem 1.5rem !important;
     margin: 0 !important;
 }
 hr {
@@ -70,17 +72,20 @@ div.stButton > button {
     border-radius: 8px !important;
     width: 100% !important;
     font-size: 1.1rem !important;
-    margin-bottom: 2rem !important;
+    margin-bottom: 1rem !important;
+    margin-top: 1rem !important;
 }
 /* ---------- Safari 印刷（Print）時の最適化CSS ---------- */
 @media print {
-    @page { margin: 10mm; }
+    @page { margin: 0; }
+    body { padding: 10mm; }
     /* ボタンや不要なUIは印刷版から完全に消す */
-    div.stButton { display: none !important; }
-    .stAlert { display: none !important; }
+    div.stButton, .stAlert { display: none !important; }
+    /* 余白をリセットして最初から始まるように */
+    .block-container { padding-top: 0 !important; }
     /* 改ページ制御（見出しの直後や段落の途中で切れないように） */
-    h2, h3 { page-break-after: avoid; }
-    p { orphans: 3; widows: 3; }
+    h2, h3 { page-break-after: avoid; margin-top: 1.5rem !important; }
+    p, li { orphans: 3; widows: 3; }
     /* 区切り線（hr）の前で改ページを促す */
     hr { page-break-before: always; border: none; height: 1px; }
 }
@@ -164,6 +169,8 @@ div.stButton > button:hover {
     transform: translateY(-2px) !important;
     box-shadow: 0 0 25px rgba(142, 84, 233, 0.8) !important;
 }
+/* コンテンツエリア用（マークダウンを綺麗に見せる） */
+.css-1n76uvr { line-height: 1.8; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -213,34 +220,7 @@ def load_generation(gen_id):
 
 init_db()
 
-# --- ファイル出力機能（ローカル完全依存） ---
-FONT_PATH = "NotoSansJP-Regular.ttf"
-
-def create_pdf(text):
-    pdf = FPDF()
-    pdf.add_page()
-    if os.path.exists(FONT_PATH):
-        try:
-            pdf.add_font("NotoSansJP", style="", fname=FONT_PATH, uni=True)
-            pdf.set_font("NotoSansJP", size=11)
-        except Exception as e:
-            st.warning(f"日本語フォント読込例外: {e}")
-            pdf.set_font("Helvetica", size=11)
-    else:
-        # ローカルに無い場合はダウンロードを試みず、警告を出して英字フォントへフォールバック
-        st.warning("⚠️ `NotoSansJP-Regular.ttf` が見つからないため標準フォントで代用しました。本番環境(GitHub等)にフォント本体を含めてください。")
-        pdf.set_font("Helvetica", size=11)
-    
-    pdf.multi_cell(0, 8, txt=text)
-    
-    try:
-        pdf_bytes = pdf.output()
-        if isinstance(pdf_bytes, str):
-            pdf_bytes = pdf_bytes.encode('latin-1')
-        return bytes(pdf_bytes)
-    except Exception:
-        return pdf.output(dest='S').encode('latin-1')
-
+# --- HTMLファイル出力機能 ---
 def create_html(title, text):
     html_content = text.replace('\n', '<br>')
     html = f"""<!DOCTYPE html>
@@ -278,7 +258,8 @@ current_time = time.time()
 if st.session_state.logged_in and (current_time - st.session_state.login_time > 3600):
     st.session_state.logged_in = False
     st.session_state.login_time = 0
-    st.session_state.preview_mode = False
+    st.session_state.preview_product = False
+    st.session_state.preview_manual = False
     st.warning("セッションがタイムアウトしました。再度ログインしてください。")
 
 # ------------------------------------------------
@@ -298,24 +279,31 @@ if not st.session_state.logged_in:
             st.error("パスワードが間違っています。")
     st.markdown('</div>', unsafe_allow_html=True)
 
-elif st.session_state.preview_mode:
-    # ------------------------------------------------
-    # 印刷専用プレビューモード
-    # ------------------------------------------------
+elif st.session_state.preview_product:
+    # 商品ページ専用プレビュー
     if st.button("← 編集画面に戻る"):
-        st.session_state.preview_mode = False
+        st.session_state.preview_product = False
         st.rerun()
         
-    st.info("💡 Safariの方は、この画面で下部の「共有ボタン」→「プリント」を押すと、不要なUI無しで綺麗にPDF保存できます。")
+    st.info("💡 Safariの方は、下部の「共有ボタン」→「プリント」を押すと、綺麗なPDFとして保存できます。")
     
-    if st.session_state.display_keyword:
-        st.markdown(f"<h2>【商品ページ】{st.session_state.display_keyword}</h2>", unsafe_allow_html=True)
-        st.markdown(st.session_state.display_product)
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.markdown(f"<h2>【商品ページ】{st.session_state.display_keyword}</h2>", unsafe_allow_html=True)
+    st.markdown(st.session_state.display_product)
+    st.markdown('</div>', unsafe_allow_html=True)
+
+elif st.session_state.preview_manual:
+    # マニュアル専用プレビュー
+    if st.button("← 編集画面に戻る"):
+        st.session_state.preview_manual = False
+        st.rerun()
         
-        st.markdown("<hr>", unsafe_allow_html=True)
-        
-        st.markdown(f"<h2>【マニュアル】{st.session_state.display_keyword}</h2>", unsafe_allow_html=True)
-        st.markdown(st.session_state.display_manual)
+    st.info("💡 Safariの方は、下部の「共有ボタン」→「プリント」を押すと、綺麗なPDFとして保存できます。")
+    
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.markdown(f"<h2>【マニュアル】{st.session_state.display_keyword}</h2>", unsafe_allow_html=True)
+    st.markdown(st.session_state.display_manual)
+    st.markdown('</div>', unsafe_allow_html=True)
 
 else:
     # ------------------------------------------------
@@ -344,9 +332,16 @@ else:
     # 結果がある場合、最上部（入力フォームの上）にプレビュー・保存ボタンを大々的に表示
     if st.session_state.display_product and st.session_state.display_manual:
         st.markdown("---")
-        if st.button("📱 スマホ保存用・印刷プレビュー画面を表示する（Safari・PDF推奨）", key="btn_top_preview"):
-            st.session_state.preview_mode = True
-            st.rerun()
+        st.markdown("<h3 style='text-align:center;'>📱 印刷プレビュー（Safari PDF保存用）</h3>", unsafe_allow_html=True)
+        colA, colB = st.columns(2)
+        with colA:
+            if st.button("📄 商品ページを表示", key="btn_top_preview_prod"):
+                st.session_state.preview_product = True
+                st.rerun()
+        with colB:
+            if st.button("📗 マニュアルを表示", key="btn_top_preview_manu"):
+                st.session_state.preview_manual = True
+                st.rerun()
         st.markdown("---")
 
     # 入力フォーム
@@ -368,7 +363,6 @@ else:
         else:
             with st.spinner("錬成中...AIが市場を分析し、コンテンツを生成しています..."):
                 try:
-                    # ユーザーが入力したAPIキーを使用
                     genai.configure(api_key=api_key)
 
                     model = genai.GenerativeModel('gemini-2.5-flash', safety_settings={
@@ -414,7 +408,7 @@ else:
                     st.session_state.display_manual = manual_content
                     st.session_state.display_keyword = genre_keyword
 
-                    st.success("✅ 錬成が完了し、履歴に保存されました！上のボタンからプレビュー画面へ移動できます。")
+                    st.success("✅ 錬成が完了し、履歴に保存されました！上のプレビューボタンから結果を確認できます。")
                     
                     time.sleep(1)
                     st.rerun()
@@ -444,7 +438,7 @@ else:
         product_html_bytes = create_html(f"【出品ページ】{st.session_state.display_keyword}", st.session_state.display_product)
         manual_html_bytes = create_html(f"【マニュアル】{st.session_state.display_keyword}", st.session_state.display_manual)
 
-        col1, col2, col3 = st.columns(3)
+        col1, col2 = st.columns(2)
         with col1:
             st.markdown("<div style='text-align: center; margin-bottom: 10px;'><b>💻 PC向け (Markdown)</b></div>", unsafe_allow_html=True)
             st.download_button(
@@ -478,33 +472,5 @@ else:
                 mime="text/html",
                 use_container_width=True
             )
-
-        with col3:
-            st.markdown("<div style='text-align: center; margin-bottom: 10px;'><b>📄 印刷・配布用 (PDF)</b></div>", unsafe_allow_html=True)
-            with st.spinner("PDFデータ作成中..."):
-                try:
-                    product_pdf_bytes = create_pdf(st.session_state.display_product)
-                    st.download_button(
-                        label="📄 商品 [.pdf]",
-                        data=product_pdf_bytes,
-                        file_name=f"{sanitized_genre}_product_page_{timestamp}.pdf",
-                        mime="application/pdf",
-                        use_container_width=True
-                    )
-                except Exception as e:
-                    st.error(f"PDF失敗: {e}")
-                
-            with st.spinner("PDFデータ作成中..."):
-                try:
-                    manual_pdf_bytes = create_pdf(st.session_state.display_manual)
-                    st.download_button(
-                        label="📄 マニ [.pdf]",
-                        data=manual_pdf_bytes,
-                        file_name=f"{sanitized_genre}_manual_{timestamp}.pdf",
-                        mime="application/pdf",
-                        use_container_width=True
-                    )
-                except Exception as e:
-                    st.error(f"PDF失敗: {e}")
         
         st.markdown('</div>', unsafe_allow_html=True)
