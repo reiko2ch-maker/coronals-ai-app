@@ -193,6 +193,29 @@ section[data-testid="stSidebar"] button:hover {
     background-color: rgba(14, 165, 233, 0.2) !important;
 }
 
+/* --- ダウンロードボタンの完全視認化とデザイン --- */
+div[data-testid="stDownloadButton"] button {
+    background: linear-gradient(135deg, #0ea5e9, #4f46e5) !important; /* 美しい青系グラデーション */
+    border: none !important;
+    border-radius: 8px !important;
+    box-shadow: 0 4px 15px rgba(14, 165, 233, 0.4) !important; /* 軽く光らせる */
+    width: 100% !important; /* ボタンを横幅いっぱいに */
+}
+
+/* ボタン内のテキスト（商品ページを保存など） */
+div[data-testid="stDownloadButton"] button p {
+    color: #ffffff !important; /* 文字を真っ白に強制 */
+    font-weight: bold !important;
+    font-size: 1.1rem !important;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.4) !important; /* 影をつけてさらに読みやすく */
+}
+
+/* ホバー（タップ）時のアクション */
+div[data-testid="stDownloadButton"] button:hover {
+    background: linear-gradient(135deg, #38bdf8, #6366f1) !important;
+    box-shadow: 0 6px 20px rgba(14, 165, 233, 0.6) !important;
+}
+
 /* コンテンツエリア用（マークダウンを綺麗に見せる） */
 .css-1n76uvr { line-height: 1.8; }
 </style>
