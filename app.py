@@ -2,7 +2,6 @@ import os
 import re
 import time
 import sqlite3
-import requests
 import google.generativeai as genai
 from datetime import datetime
 import streamlit as st
@@ -11,7 +10,68 @@ from fpdf import FPDF
 # --- UIカスタマイズ設定 ---
 st.set_page_config(page_title="AI自動コンテンツ錬成システム", layout="centered", page_icon="✨")
 
-st.markdown("""
+# --- セッション状態の初期化 ---
+if 'logged_in' not in st.session_state:
+    st.session_state.logged_in = False
+if 'login_time' not in st.session_state:
+    st.session_state.login_time = 0
+if 'preview_mode' not in st.session_state:
+    st.session_state.preview_mode = False
+if 'display_product' not in st.session_state:
+    st.session_state.display_product = None
+if 'display_manual' not in st.session_state:
+    st.session_state.display_manual = None
+if 'display_keyword' not in st.session_state:
+    st.session_state.display_keyword = None
+
+if st.session_state.preview_mode:
+    st.markdown("""
+<style>
+/* 印刷プレビュー用CSS（全てを白黒にし、不要なUIを消す） */
+.stApp {
+    background: #ffffff !important;
+    color: #000000 !important;
+}
+[data-testid="stSidebar"] {
+    display: none !important;
+}
+[data-testid="stHeader"] {
+    display: none !important;
+}
+h1, h2, h3, h4, h5, h6 {
+    background: none !important;
+    -webkit-background-clip: unset !important;
+    -webkit-text-fill-color: #000000 !important;
+    color: #000000 !important;
+    text-shadow: none !important;
+}
+.card {
+    background: transparent !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    color: #000000 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+hr {
+    border-color: #dddddd !important;
+}
+/* 戻るボタン専用の簡素なスタイル */
+div.stButton > button {
+    background: #f0f0f0 !important;
+    color: #333333 !important;
+    border: 1px solid #cccccc !important;
+    box-shadow: none !important;
+    padding: 0.5rem 1rem !important;
+    border-radius: 8px !important;
+    width: auto !important;
+}
+</style>
+""", unsafe_allow_html=True)
+else:
+    st.markdown("""
 <style>
 /* アプリ全体の背景（ダークネイビー・サイバー・ハイテク感） */
 .stApp {
@@ -102,6 +162,7 @@ div.stButton > button:hover {
 </style>
 """, unsafe_allow_html=True)
 
+
 # --- DB初期化 ---
 DB_PATH = "history.db"
 
@@ -148,21 +209,9 @@ def load_generation(gen_id):
 init_db()
 
 # --- ファイル出力機能 ---
-FONT_URL = "https://github.com/googlefonts/noto-fonts/raw/main/hinted/ttf/NotoSansJP/NotoSansJP-Regular.ttf"
 FONT_PATH = "NotoSansJP-Regular.ttf"
 
-def download_font():
-    if not os.path.exists(FONT_PATH):
-        try:
-            response = requests.get(FONT_URL, timeout=10)
-            response.raise_for_status()
-            with open(FONT_PATH, "wb") as f:
-                f.write(response.content)
-        except Exception as e:
-            st.error(f"フォントのダウンロードに失敗しました。デフォルトフォントを使用します: {e}")
-
 def create_pdf(text):
-    download_font()
     pdf = FPDF()
     pdf.add_page()
     if os.path.exists(FONT_PATH):
@@ -173,6 +222,7 @@ def create_pdf(text):
             st.warning(f"日本語フォントの読み込みに失敗しました: {e}")
             pdf.set_font("Helvetica", size=11)
     else:
+        st.warning("⚠️ `NotoSansJP-Regular.ttf` が見つからないため、標準フォントで代用します（日本語が文字化けする可能性があります）。リポジトリにフォントファイルを追加してください。")
         pdf.set_font("Helvetica", size=11)
     
     # PDFにテキストを出力
@@ -189,14 +239,12 @@ def create_pdf(text):
 
 def create_html(title, text):
     """Markdownテキストをスマホで見やすいHTMLに変換してエクスポート"""
-    # 簡易的なMarkdown -> HTML変換（改行を<br>に等）
-    # より正確な表示には markdown モジュールが必要ですが、基本の体裁を整えます
     html_content = text.replace('\n', '<br>')
     
     html = f"""<!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
+    <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{title}</title>
     <style>
@@ -221,6 +269,15 @@ def create_html(title, text):
             border-radius: 12px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.05);
         }}
+        @media print {{
+            body, .container {{
+                background-color: transparent !important;
+                box-shadow: none !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                color: #000000 !important;
+            }}
+        }}
     </style>
 </head>
 <body>
@@ -231,12 +288,6 @@ def create_html(title, text):
 </html>"""
     return html.encode('utf-8')
 
-
-# --- セッション状態の初期化 ---
-if 'logged_in' not in st.session_state:
-    st.session_state.logged_in = False
-if 'login_time' not in st.session_state:
-    st.session_state.login_time = 0
 
 # ログイン状態の確認（1時間有効、3600秒）
 current_time = time.time()
@@ -258,8 +309,29 @@ if not st.session_state.logged_in:
         else:
             st.error("パスワードが間違っています。")
     st.markdown('</div>', unsafe_allow_html=True)
+
+elif st.session_state.preview_mode:
+    # ------------------------------------------------
+    # 印刷専用プレビューモード（UI非表示・白背景）
+    # ------------------------------------------------
+    if st.button("← 編集画面に戻る"):
+        st.session_state.preview_mode = False
+        st.rerun()
+        
+    st.info("💡 Safariの方は、この画面で下部の「共有ボタン」→「プリント」を押すとPDFとして綺麗に保存できます。")
+    
+    st.markdown(f"<h2>【商品ページ】{st.session_state.display_keyword}</h2>", unsafe_allow_html=True)
+    st.markdown(st.session_state.display_product)
+    
+    st.markdown("<hr>", unsafe_allow_html=True)
+    
+    st.markdown(f"<h2>【マニュアル】{st.session_state.display_keyword}</h2>", unsafe_allow_html=True)
+    st.markdown(st.session_state.display_manual)
+
 else:
-    # --- サイドバー（履歴表示） ---
+    # ------------------------------------------------
+    # 通常のメイン画面（編集・生成用）
+    # ------------------------------------------------
     st.sidebar.title("📚 過去の錬成履歴")
     history_records = load_history()
     
@@ -271,22 +343,16 @@ else:
     else:
         st.sidebar.info("履歴はまだありません。")
 
-    # --- メイン画面 ---
     st.markdown("<h1>AI自動コンテンツ錬成システム</h1>", unsafe_allow_html=True)
     
-    # データ表示用変数
-    display_product = None
-    display_manual = None
-    display_keyword = None
-
     if selected_record_id:
         row = load_generation(selected_record_id)
         if row:
-            display_product, display_manual = row
-            display_keyword = next((rec[2] for rec in history_records if rec[0] == selected_record_id), "不明")
-            st.info(f"履歴を復元しました: 『{display_keyword}』")
+            st.session_state.display_product, st.session_state.display_manual = row
+            st.session_state.display_keyword = next((rec[2] for rec in history_records if rec[0] == selected_record_id), "不明")
+            st.info(f"履歴を復元しました: 『{st.session_state.display_keyword}』")
 
-    # 入力フォーム（常に上部に表示）
+    # 入力フォーム
     st.markdown('<div class="card">', unsafe_allow_html=True)
     st.markdown("### 🔑 APIキー設定")
     api_key = st.text_input("ご自身のGemini APIキーを入力してください", type="password", placeholder="AIzaSy...")
@@ -315,11 +381,9 @@ else:
                         'HARM_CATEGORY_DANGEROUS_CONTENT': 'BLOCK_NONE'
                     })
 
-                    # Step 1: 市場分析
                     research_prompt = f"ココナラで「{genre_keyword}」の売れ筋を分析し、ターゲットの悩みと解決策をまとめてください。"
                     research_data = model.generate_content(research_prompt).text
 
-                    # Step 2: 出品ページ・プロンプト生成
                     package_prompt = f"""以下の分析をもとに、ココナラでの「出品ページ用テキスト」と「サムネイル生成プロンプト」を作成してください。
 必ず以下の構成と条件（景品表示法・プラットフォームガイドライン遵守）を厳守して出力してください。
 
@@ -343,21 +407,18 @@ else:
 """
                     product_package = model.generate_content(package_prompt).text
 
-                    # Step 3: マニュアル生成
                     manual_prompt = f"以下の商品内容に沿った、購入者が満足する実践的なノウハウマニュアルをMarkdown形式で詳しく執筆してください。\n\n商品内容:\n{product_package}"
                     manual_content = model.generate_content(manual_prompt).text
                     
-                    # データベースに保存
                     save_to_db(genre_keyword, product_package, manual_content)
 
                     # 表示変数にセット
-                    display_product = product_package
-                    display_manual = manual_content
-                    display_keyword = genre_keyword
+                    st.session_state.display_product = product_package
+                    st.session_state.display_manual = manual_content
+                    st.session_state.display_keyword = genre_keyword
 
                     st.success("✅ 錬成が完了し、履歴に保存されました！")
                     
-                    # 保存後に再度履歴を反映して表示するためにリロード
                     time.sleep(1)
                     st.rerun()
 
@@ -365,48 +426,54 @@ else:
                     st.error(f"エラーが発生しました: 今回入力したAPIキーが正しいか、ネットワーク状況をご確認ください。\n({str(e)})")
 
     # 結果のプレビューとダウンロード
-    if display_product and display_manual and display_keyword:
+    if st.session_state.display_product and st.session_state.display_manual and st.session_state.display_keyword:
         st.markdown('<div class="card">', unsafe_allow_html=True)
         st.markdown("## 📄 商品ページ")
-        st.markdown(display_product)
+        st.markdown(st.session_state.display_product)
         st.markdown('</div>', unsafe_allow_html=True)
         
         st.markdown('<div class="card">', unsafe_allow_html=True)
         st.markdown("## 📗 マニュアル")
-        st.markdown(display_manual)
+        st.markdown(st.session_state.display_manual)
         st.markdown('</div>', unsafe_allow_html=True)
 
         # ファイル名用のサニタイズ
-        sanitized_genre = re.sub(r'[\\/:*?"<>| ]', '_', display_keyword)
+        sanitized_genre = re.sub(r'[\\/:*?"<>| ]', '_', st.session_state.display_keyword)
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
         st.markdown('<div class="card">', unsafe_allow_html=True)
+        
+        # スマホ向け印刷プレビュー切り替えボタン
+        if st.button("📱 スマホ・印刷用プレビューを表示（PDF保存用）"):
+            st.session_state.preview_mode = True
+            st.rerun()
+
+        st.markdown("<hr>", unsafe_allow_html=True)
         st.markdown("### 💾 ファイルのダウンロード")
         
-        # HTMLデータの生成
-        product_html_bytes = create_html(f"【出品ページ】{display_keyword}", display_product)
-        manual_html_bytes = create_html(f"【マニュアル】{display_keyword}", display_manual)
+        product_html_bytes = create_html(f"【出品ページ】{st.session_state.display_keyword}", st.session_state.display_product)
+        manual_html_bytes = create_html(f"【マニュアル】{st.session_state.display_keyword}", st.session_state.display_manual)
 
         col1, col2, col3 = st.columns(3)
         with col1:
             st.markdown("<div style='text-align: center; margin-bottom: 10px;'><b>💻 PC向け (Markdown)</b></div>", unsafe_allow_html=True)
             st.download_button(
                 label="🛒 商品 [.md]",
-                data=display_product,
+                data=st.session_state.display_product,
                 file_name=f"{sanitized_genre}_product_page_{timestamp}.md",
                 mime="text/markdown",
                 use_container_width=True
             )
             st.download_button(
                 label="📘 マニ [.md]",
-                data=display_manual,
+                data=st.session_state.display_manual,
                 file_name=f"{sanitized_genre}_manual_{timestamp}.md",
                 mime="text/markdown",
                 use_container_width=True
             )
             
         with col2:
-            st.markdown("<div style='text-align: center; margin-bottom: 10px;'><b>📱 スマホ推奨 (HTML)</b></div>", unsafe_allow_html=True)
+            st.markdown("<div style='text-align: center; margin-bottom: 10px;'><b>📱 スマホ保存用 (HTML)</b></div>", unsafe_allow_html=True)
             st.download_button(
                 label="🌐 商品 [.html]",
                 data=product_html_bytes,
@@ -426,7 +493,7 @@ else:
             st.markdown("<div style='text-align: center; margin-bottom: 10px;'><b>📄 印刷・配布用 (PDF)</b></div>", unsafe_allow_html=True)
             with st.spinner("PDFデータ作成中..."):
                 try:
-                    product_pdf_bytes = create_pdf(display_product)
+                    product_pdf_bytes = create_pdf(st.session_state.display_product)
                     st.download_button(
                         label="📄 商品 [.pdf]",
                         data=product_pdf_bytes,
@@ -439,7 +506,7 @@ else:
                 
             with st.spinner("PDFデータ作成中..."):
                 try:
-                    manual_pdf_bytes = create_pdf(display_manual)
+                    manual_pdf_bytes = create_pdf(st.session_state.display_manual)
                     st.download_button(
                         label="📄 マニ [.pdf]",
                         data=manual_pdf_bytes,
