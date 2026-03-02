@@ -147,27 +147,31 @@ def load_generation(gen_id):
 
 init_db()
 
-# --- PDF生成機能 ---
-FONT_URL = "https://github.com/google/fonts/raw/main/ofl/notosansjp/NotoSansJP-Regular.ttf"
+# --- ファイル出力機能 ---
+FONT_URL = "https://github.com/googlefonts/noto-fonts/raw/main/hinted/ttf/NotoSansJP/NotoSansJP-Regular.ttf"
 FONT_PATH = "NotoSansJP-Regular.ttf"
 
 def download_font():
     if not os.path.exists(FONT_PATH):
         try:
-            response = requests.get(FONT_URL)
+            response = requests.get(FONT_URL, timeout=10)
             response.raise_for_status()
             with open(FONT_PATH, "wb") as f:
                 f.write(response.content)
         except Exception as e:
-            st.error(f"フォントのダウンロードに失敗しました: {e}")
+            st.error(f"フォントのダウンロードに失敗しました。デフォルトフォントを使用します: {e}")
 
 def create_pdf(text):
     download_font()
     pdf = FPDF()
     pdf.add_page()
     if os.path.exists(FONT_PATH):
-        pdf.add_font("NotoSansJP", style="", fname=FONT_PATH, uni=True)
-        pdf.set_font("NotoSansJP", size=11)
+        try:
+            pdf.add_font("NotoSansJP", style="", fname=FONT_PATH, uni=True)
+            pdf.set_font("NotoSansJP", size=11)
+        except Exception as e:
+            st.warning(f"日本語フォントの読み込みに失敗しました: {e}")
+            pdf.set_font("Helvetica", size=11)
     else:
         pdf.set_font("Helvetica", size=11)
     
@@ -182,6 +186,50 @@ def create_pdf(text):
     except Exception:
         # 古いfpdfの場合は dest='S'
         return pdf.output(dest='S').encode('latin-1')
+
+def create_html(title, text):
+    """Markdownテキストをスマホで見やすいHTMLに変換してエクスポート"""
+    # 簡易的なMarkdown -> HTML変換（改行を<br>に等）
+    # より正確な表示には markdown モジュールが必要ですが、基本の体裁を整えます
+    html_content = text.replace('\n', '<br>')
+    
+    html = f"""<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{title}</title>
+    <style>
+        body {{
+            font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
+            padding: 20px;
+            line-height: 1.8;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: #fcfcfc;
+        }}
+        h1, h2, h3 {{
+            color: #1a1a1a;
+            border-bottom: 2px solid #eaeaea;
+            padding-bottom: 8px;
+            margin-top: 24px;
+        }}
+        .container {{
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        {html_content}
+    </div>
+</body>
+</html>"""
+    return html.encode('utf-8')
 
 
 # --- セッション状態の初期化 ---
@@ -335,18 +383,22 @@ else:
         st.markdown('<div class="card">', unsafe_allow_html=True)
         st.markdown("### 💾 ファイルのダウンロード")
         
-        col1, col2 = st.columns(2)
+        # HTMLデータの生成
+        product_html_bytes = create_html(f"【出品ページ】{display_keyword}", display_product)
+        manual_html_bytes = create_html(f"【マニュアル】{display_keyword}", display_manual)
+
+        col1, col2, col3 = st.columns(3)
         with col1:
-            st.markdown("**PC・Markdown向け**")
+            st.markdown("<div style='text-align: center; margin-bottom: 10px;'><b>💻 PC向け (Markdown)</b></div>", unsafe_allow_html=True)
             st.download_button(
-                label="🛒 商品ページ (.md)",
+                label="🛒 商品 [.md]",
                 data=display_product,
                 file_name=f"{sanitized_genre}_product_page_{timestamp}.md",
                 mime="text/markdown",
                 use_container_width=True
             )
             st.download_button(
-                label="📘 マニュアル (.md)",
+                label="📘 マニ [.md]",
                 data=display_manual,
                 file_name=f"{sanitized_genre}_manual_{timestamp}.md",
                 mime="text/markdown",
@@ -354,13 +406,29 @@ else:
             )
             
         with col2:
-            st.markdown("**スマホ・PDF向け**")
-            
+            st.markdown("<div style='text-align: center; margin-bottom: 10px;'><b>📱 スマホ推奨 (HTML)</b></div>", unsafe_allow_html=True)
+            st.download_button(
+                label="🌐 商品 [.html]",
+                data=product_html_bytes,
+                file_name=f"{sanitized_genre}_product_page_{timestamp}.html",
+                mime="text/html",
+                use_container_width=True
+            )
+            st.download_button(
+                label="🌐 マニ [.html]",
+                data=manual_html_bytes,
+                file_name=f"{sanitized_genre}_manual_{timestamp}.html",
+                mime="text/html",
+                use_container_width=True
+            )
+
+        with col3:
+            st.markdown("<div style='text-align: center; margin-bottom: 10px;'><b>📄 印刷・配布用 (PDF)</b></div>", unsafe_allow_html=True)
             with st.spinner("PDFデータ作成中..."):
                 try:
                     product_pdf_bytes = create_pdf(display_product)
                     st.download_button(
-                        label="📄 商品ページ (.pdf)",
+                        label="📄 商品 [.pdf]",
                         data=product_pdf_bytes,
                         file_name=f"{sanitized_genre}_product_page_{timestamp}.pdf",
                         mime="application/pdf",
@@ -373,7 +441,7 @@ else:
                 try:
                     manual_pdf_bytes = create_pdf(display_manual)
                     st.download_button(
-                        label="📄 マニュアル (.pdf)",
+                        label="📄 マニ [.pdf]",
                         data=manual_pdf_bytes,
                         file_name=f"{sanitized_genre}_manual_{timestamp}.pdf",
                         mime="application/pdf",
