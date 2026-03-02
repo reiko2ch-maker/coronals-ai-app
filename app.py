@@ -36,10 +36,13 @@ if st.session_state.preview_product or st.session_state.preview_manual:
 [data-testid="stSidebar"], [data-testid="stHeader"], [data-testid="stToolbar"] {
     display: none !important;
 }
-.block-container {
+/* コンテナの高さ制限やスクロールを完全に解除して全内容を描画させる（複数ページPDF対応の要点） */
+.block-container, .stApp, .main, div.stMarkdown, div.stVerticalBlock {
     padding: 0 !important;
     margin: 0 auto !important;
     max-width: 800px !important;
+    height: auto !important;
+    overflow: visible !important;
 }
 /* すべてのテキスト要素を強制的に黒無地に */
 h1, h2, h3, h4, h5, h6, p, div, span, li, ul, ol, strong, em, b, i {
@@ -57,6 +60,8 @@ h1, h2, h3, h4, h5, h6, p, div, span, li, ul, ol, strong, em, b, i {
     box-shadow: none !important;
     padding: 1rem 1.5rem !important;
     margin: 0 !important;
+    overflow: visible !important;
+    height: auto !important;
 }
 hr {
     border-color: #dddddd !important;
@@ -81,8 +86,13 @@ div.stButton > button {
     body { padding: 10mm; }
     /* ボタンや不要なUIは印刷版から完全に消す */
     div.stButton, .stAlert { display: none !important; }
-    /* 余白をリセットして最初から始まるように */
-    .block-container { padding-top: 0 !important; }
+    /* 余白やスクロール制限をリセットして最初から最後まで出力されるように */
+    .block-container, .stApp, .main, div.stMarkdown, div.stVerticalBlock, .card {
+        padding-top: 0 !important;
+        height: auto !important;
+        overflow: visible !important;
+        position: static !important;
+    }
     /* 改ページ制御（見出しの直後や段落の途中で切れないように） */
     h2, h3 { page-break-after: avoid; margin-top: 1.5rem !important; }
     p, li { orphans: 3; widows: 3; }
@@ -322,6 +332,22 @@ else:
 
     st.markdown("<h1>AI自動コンテンツ錬成システム</h1>", unsafe_allow_html=True)
     
+    # 使い方ガイド（メイン画面トップに常設）
+    with st.expander("📘 システムの使い方（履歴の活用）"):
+        st.markdown("""
+        - 錬成した「商品ページ」や「マニュアル」は、左上の**「過去の錬成履歴」に自動で保存**されます。
+        - 履歴のボタンを押せば、いつ開いても同じ内容を一瞬で復元可能です。間違って画面を閉じても安心です。
+        """)
+    with st.expander("📱 スマホでのPDF保存方法（Safari推奨）"):
+        st.markdown("""
+        **【iPhone/Safariの場合】**
+        1. 錬成完了後、上部の**「📱 プレビューを表示」**ボタンを押す
+        2. 白背景の専用画面になったら、画面下部の **共有（□から↑矢印が出ているアイコン）** をタップ
+        3. メニューを下へスクロールし **「プリント」** をタップ
+        4. オプション画面が開くので、右上の **「プリント」 または プレビュー画像を二本指で拡大（ピンチアウト）** する
+        5. さらに共有ボタンを押して **「ファイルに保存」** などを選べば、美しい複数ページPDFとして保存完了！
+        """)
+
     if selected_record_id:
         row = load_generation(selected_record_id)
         if row:
@@ -332,14 +358,14 @@ else:
     # 結果がある場合、最上部（入力フォームの上）にプレビュー・保存ボタンを大々的に表示
     if st.session_state.display_product and st.session_state.display_manual:
         st.markdown("---")
-        st.markdown("<h3 style='text-align:center;'>📱 印刷プレビュー（Safari PDF保存用）</h3>", unsafe_allow_html=True)
+        st.markdown("<h3 style='text-align:center;'>📱 プリント保存用プレビュー</h3>", unsafe_allow_html=True)
         colA, colB = st.columns(2)
         with colA:
-            if st.button("📄 商品ページを表示", key="btn_top_preview_prod"):
+            if st.button("📄 商品ページを表示\n(保存用)", key="btn_top_preview_prod"):
                 st.session_state.preview_product = True
                 st.rerun()
         with colB:
-            if st.button("📗 マニュアルを表示", key="btn_top_preview_manu"):
+            if st.button("📗 マニュアルを表示\n(保存用)", key="btn_top_preview_manu"):
                 st.session_state.preview_manual = True
                 st.rerun()
         st.markdown("---")
@@ -433,7 +459,7 @@ else:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
         st.markdown('<div class="card">', unsafe_allow_html=True)
-        st.markdown("### 💾 その他のファイルダウンロード")
+        st.markdown("### 💾 ダウンロード（PC・代替用）")
         
         product_html_bytes = create_html(f"【出品ページ】{st.session_state.display_keyword}", st.session_state.display_product)
         manual_html_bytes = create_html(f"【マニュアル】{st.session_state.display_keyword}", st.session_state.display_manual)
@@ -457,7 +483,7 @@ else:
             )
             
         with col2:
-            st.markdown("<div style='text-align: center; margin-bottom: 10px;'><b>📱 HTML保存</b></div>", unsafe_allow_html=True)
+            st.markdown("<div style='text-align: center; margin-bottom: 10px;'><b>📱 HTMLによる保存</b></div>", unsafe_allow_html=True)
             st.download_button(
                 label="🌐 商品 [.html]",
                 data=product_html_bytes,
