@@ -24,21 +24,23 @@ if 'display_manual' not in st.session_state:
 if 'display_keyword' not in st.session_state:
     st.session_state.display_keyword = None
 
+# --- CSS切り替え（プレビュー or 通常） ---
 if st.session_state.preview_mode:
     st.markdown("""
 <style>
-/* 印刷プレビュー用CSS（全てを白黒にし、不要なUIを消す） */
+/* 印刷プレビュー用CSS（UI消去・白背景・黒文字フォーカス） */
 .stApp {
     background: #ffffff !important;
-    color: #000000 !important;
 }
-[data-testid="stSidebar"] {
+[data-testid="stSidebar"], [data-testid="stHeader"], [data-testid="stToolbar"] {
     display: none !important;
 }
-[data-testid="stHeader"] {
-    display: none !important;
+.block-container {
+    padding: 1rem 1rem !important;
+    max-width: 100% !important;
 }
-h1, h2, h3, h4, h5, h6 {
+/* すべてのテキスト要素を強制的に黒無地に */
+h1, h2, h3, h4, h5, h6, p, div, span {
     background: none !important;
     -webkit-background-clip: unset !important;
     -webkit-text-fill-color: #000000 !important;
@@ -51,42 +53,52 @@ h1, h2, h3, h4, h5, h6 {
     -webkit-backdrop-filter: none !important;
     border: none !important;
     box-shadow: none !important;
-    color: #000000 !important;
     padding: 0 !important;
     margin: 0 !important;
 }
 hr {
     border-color: #dddddd !important;
+    margin: 2rem 0 !important;
 }
-/* 戻るボタン専用の簡素なスタイル */
+/* 戻るボタンのスタイル */
 div.stButton > button {
     background: #f0f0f0 !important;
     color: #333333 !important;
     border: 1px solid #cccccc !important;
     box-shadow: none !important;
-    padding: 0.5rem 1rem !important;
+    padding: 0.6rem 1.2rem !important;
     border-radius: 8px !important;
-    width: auto !important;
+    width: 100% !important;
+    font-size: 1.1rem !important;
+    margin-bottom: 2rem !important;
+}
+/* ---------- Safari 印刷（Print）時の最適化CSS ---------- */
+@media print {
+    @page { margin: 10mm; }
+    /* ボタンや不要なUIは印刷版から完全に消す */
+    div.stButton { display: none !important; }
+    .stAlert { display: none !important; }
+    /* 改ページ制御（見出しの直後や段落の途中で切れないように） */
+    h2, h3 { page-break-after: avoid; }
+    p { orphans: 3; widows: 3; }
+    /* 区切り線（hr）の前で改ページを促す */
+    hr { page-break-before: always; border: none; height: 1px; }
 }
 </style>
 """, unsafe_allow_html=True)
 else:
     st.markdown("""
 <style>
-/* アプリ全体の背景（ダークネイビー・サイバー・ハイテク感） */
+/* --- 通常画面：ハイテクSaaSデザイン --- */
 .stApp {
     background: linear-gradient(135deg, #0f172a 0%, #000000 100%);
     color: #ffffff;
 }
-
-/* メインコンテナの余白調整 */
 .block-container {
     padding-top: 3rem;
     padding-bottom: 5rem;
     max-width: 850px;
 }
-
-/* 見出しの豪華な装飾（発光感のある水色/Cyan） */
 h1 {
     background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%);
     -webkit-background-clip: text;
@@ -96,13 +108,10 @@ h1 {
     margin-bottom: 2rem !important;
     text-shadow: 0 0 10px rgba(0, 242, 254, 0.4);
 }
-
 h2, h3 {
     color: #00f2fe !important;
     text-shadow: 0 0 8px rgba(0, 242, 254, 0.3);
 }
-
-/* カード型UIの定義・グラスモーフィズム（Glassmorphism）パネル */
 .card {
     background: rgba(255, 255, 255, 0.08);
     backdrop-filter: blur(12px);
@@ -114,35 +123,31 @@ h2, h3 {
     margin-bottom: 2rem;
     color: #ffffff;
 }
-
-/* --- 入力欄上の文字（ラベル）を絶対に表示させる --- */
 .stTextInput label p, .stPasswordInput label p {
     color: #ffffff !important;
     font-weight: bold !important;
     font-size: 1.1rem !important;
     text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
 }
-
-/* --- 入力欄とボタンの高級感アップ（Streamlitのデフォルト入力を強制上書き） --- */
 div[data-baseweb="input"] {
-    background-color: rgba(0, 0, 0, 0.2) !important; /* 少し暗い半透明 */
+    background-color: rgba(0, 0, 0, 0.2) !important;
     border-radius: 8px !important;
     border: 1px solid rgba(255, 255, 255, 0.3) !important;
 }
-
 div[data-baseweb="input"] input {
     color: #ffffff !important;
-    -webkit-text-fill-color: #ffffff !important; /* ←文字化け/透明化を防ぐ特効薬 */
+    -webkit-text-fill-color: #ffffff !important;
     font-weight: 500 !important;
-    caret-color: #ffffff !important; /* カーソルの色も白に */
+    caret-color: #ffffff !important;
 }
-
 div[data-baseweb="input"] input::placeholder {
     color: #aaaaaa !important;
     -webkit-text-fill-color: #aaaaaa !important;
 }
-
-/* 錬成ボタンの装飾（パープルグラデーション・ホバー発光） */
+b, strong {
+    color: #f1c40f !important; /* 強調を少し金色に */
+}
+/* 錬成ボタンの装飾 */
 div.stButton > button {
     background: linear-gradient(135deg, #4776E6 0%, #8E54E9 100%) !important;
     color: white !important;
@@ -157,7 +162,7 @@ div.stButton > button {
 }
 div.stButton > button:hover {
     transform: translateY(-2px) !important;
-    box-shadow: 0 0 25px rgba(142, 84, 233, 0.8) !important; /* glow効果 */
+    box-shadow: 0 0 25px rgba(142, 84, 233, 0.8) !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -208,7 +213,7 @@ def load_generation(gen_id):
 
 init_db()
 
-# --- ファイル出力機能 ---
+# --- ファイル出力機能（ローカル完全依存） ---
 FONT_PATH = "NotoSansJP-Regular.ttf"
 
 def create_pdf(text):
@@ -219,13 +224,13 @@ def create_pdf(text):
             pdf.add_font("NotoSansJP", style="", fname=FONT_PATH, uni=True)
             pdf.set_font("NotoSansJP", size=11)
         except Exception as e:
-            st.warning(f"日本語フォントの読み込みに失敗しました: {e}")
+            st.warning(f"日本語フォント読込例外: {e}")
             pdf.set_font("Helvetica", size=11)
     else:
-        st.warning("⚠️ `NotoSansJP-Regular.ttf` が見つからないため、標準フォントで代用します（日本語が文字化けする可能性があります）。リポジトリにフォントファイルを追加してください。")
+        # ローカルに無い場合はダウンロードを試みず、警告を出して英字フォントへフォールバック
+        st.warning("⚠️ `NotoSansJP-Regular.ttf` が見つからないため標準フォントで代用しました。本番環境(GitHub等)にフォント本体を含めてください。")
         pdf.set_font("Helvetica", size=11)
     
-    # PDFにテキストを出力
     pdf.multi_cell(0, 8, txt=text)
     
     try:
@@ -234,13 +239,10 @@ def create_pdf(text):
             pdf_bytes = pdf_bytes.encode('latin-1')
         return bytes(pdf_bytes)
     except Exception:
-        # 古いfpdfの場合は dest='S'
         return pdf.output(dest='S').encode('latin-1')
 
 def create_html(title, text):
-    """Markdownテキストをスマホで見やすいHTMLに変換してエクスポート"""
     html_content = text.replace('\n', '<br>')
-    
     html = f"""<!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -257,33 +259,15 @@ def create_html(title, text):
             margin: 0 auto;
             background-color: #fcfcfc;
         }}
-        h1, h2, h3 {{
-            color: #1a1a1a;
-            border-bottom: 2px solid #eaeaea;
-            padding-bottom: 8px;
-            margin-top: 24px;
-        }}
-        .container {{
-            background: #ffffff;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-        }}
+        h1, h2, h3 {{ color: #1a1a1a; border-bottom: 2px solid #eaeaea; padding-bottom: 8px; margin-top: 24px; }}
+        .container {{ background: #ffffff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }}
         @media print {{
-            body, .container {{
-                background-color: transparent !important;
-                box-shadow: none !important;
-                padding: 0 !important;
-                margin: 0 !important;
-                color: #000000 !important;
-            }}
+            body, .container {{ background-color: transparent !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; color: #000000 !important; }}
         }}
     </style>
 </head>
 <body>
-    <div class="container">
-        {html_content}
-    </div>
+    <div class="container">{html_content}</div>
 </body>
 </html>"""
     return html.encode('utf-8')
@@ -294,10 +278,14 @@ current_time = time.time()
 if st.session_state.logged_in and (current_time - st.session_state.login_time > 3600):
     st.session_state.logged_in = False
     st.session_state.login_time = 0
+    st.session_state.preview_mode = False
     st.warning("セッションがタイムアウトしました。再度ログインしてください。")
 
-# --- アプリケーションUI ---
+# ------------------------------------------------
+# アプリケーション UI (ルート分岐)
+# ------------------------------------------------
 if not st.session_state.logged_in:
+    # ログイン画面
     st.markdown("<h1>System Login</h1>", unsafe_allow_html=True)
     st.markdown('<div class="card">', unsafe_allow_html=True)
     password = st.text_input("システムパスワード", type="password", placeholder="パスワードを入力")
@@ -312,21 +300,22 @@ if not st.session_state.logged_in:
 
 elif st.session_state.preview_mode:
     # ------------------------------------------------
-    # 印刷専用プレビューモード（UI非表示・白背景）
+    # 印刷専用プレビューモード
     # ------------------------------------------------
     if st.button("← 編集画面に戻る"):
         st.session_state.preview_mode = False
         st.rerun()
         
-    st.info("💡 Safariの方は、この画面で下部の「共有ボタン」→「プリント」を押すとPDFとして綺麗に保存できます。")
+    st.info("💡 Safariの方は、この画面で下部の「共有ボタン」→「プリント」を押すと、不要なUI無しで綺麗にPDF保存できます。")
     
-    st.markdown(f"<h2>【商品ページ】{st.session_state.display_keyword}</h2>", unsafe_allow_html=True)
-    st.markdown(st.session_state.display_product)
-    
-    st.markdown("<hr>", unsafe_allow_html=True)
-    
-    st.markdown(f"<h2>【マニュアル】{st.session_state.display_keyword}</h2>", unsafe_allow_html=True)
-    st.markdown(st.session_state.display_manual)
+    if st.session_state.display_keyword:
+        st.markdown(f"<h2>【商品ページ】{st.session_state.display_keyword}</h2>", unsafe_allow_html=True)
+        st.markdown(st.session_state.display_product)
+        
+        st.markdown("<hr>", unsafe_allow_html=True)
+        
+        st.markdown(f"<h2>【マニュアル】{st.session_state.display_keyword}</h2>", unsafe_allow_html=True)
+        st.markdown(st.session_state.display_manual)
 
 else:
     # ------------------------------------------------
@@ -351,6 +340,14 @@ else:
             st.session_state.display_product, st.session_state.display_manual = row
             st.session_state.display_keyword = next((rec[2] for rec in history_records if rec[0] == selected_record_id), "不明")
             st.info(f"履歴を復元しました: 『{st.session_state.display_keyword}』")
+
+    # 結果がある場合、最上部（入力フォームの上）にプレビュー・保存ボタンを大々的に表示
+    if st.session_state.display_product and st.session_state.display_manual:
+        st.markdown("---")
+        if st.button("📱 スマホ保存用・印刷プレビュー画面を表示する（Safari・PDF推奨）", key="btn_top_preview"):
+            st.session_state.preview_mode = True
+            st.rerun()
+        st.markdown("---")
 
     # 入力フォーム
     st.markdown('<div class="card">', unsafe_allow_html=True)
@@ -417,7 +414,7 @@ else:
                     st.session_state.display_manual = manual_content
                     st.session_state.display_keyword = genre_keyword
 
-                    st.success("✅ 錬成が完了し、履歴に保存されました！")
+                    st.success("✅ 錬成が完了し、履歴に保存されました！上のボタンからプレビュー画面へ移動できます。")
                     
                     time.sleep(1)
                     st.rerun()
@@ -425,7 +422,7 @@ else:
                 except Exception as e:
                     st.error(f"エラーが発生しました: 今回入力したAPIキーが正しいか、ネットワーク状況をご確認ください。\n({str(e)})")
 
-    # 結果のプレビューとダウンロード
+    # 結果のプレビューカード（通常画面の下部にも念のため表示）
     if st.session_state.display_product and st.session_state.display_manual and st.session_state.display_keyword:
         st.markdown('<div class="card">', unsafe_allow_html=True)
         st.markdown("## 📄 商品ページ")
@@ -442,14 +439,7 @@ else:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
         st.markdown('<div class="card">', unsafe_allow_html=True)
-        
-        # スマホ向け印刷プレビュー切り替えボタン
-        if st.button("📱 スマホ・印刷用プレビューを表示（PDF保存用）"):
-            st.session_state.preview_mode = True
-            st.rerun()
-
-        st.markdown("<hr>", unsafe_allow_html=True)
-        st.markdown("### 💾 ファイルのダウンロード")
+        st.markdown("### 💾 その他のファイルダウンロード")
         
         product_html_bytes = create_html(f"【出品ページ】{st.session_state.display_keyword}", st.session_state.display_product)
         manual_html_bytes = create_html(f"【マニュアル】{st.session_state.display_keyword}", st.session_state.display_manual)
@@ -473,7 +463,7 @@ else:
             )
             
         with col2:
-            st.markdown("<div style='text-align: center; margin-bottom: 10px;'><b>📱 スマホ保存用 (HTML)</b></div>", unsafe_allow_html=True)
+            st.markdown("<div style='text-align: center; margin-bottom: 10px;'><b>📱 HTML保存</b></div>", unsafe_allow_html=True)
             st.download_button(
                 label="🌐 商品 [.html]",
                 data=product_html_bytes,
@@ -502,7 +492,7 @@ else:
                         use_container_width=True
                     )
                 except Exception as e:
-                    st.error(f"商品ページのPDF化に失敗しました: {e}")
+                    st.error(f"PDF失敗: {e}")
                 
             with st.spinner("PDFデータ作成中..."):
                 try:
@@ -515,6 +505,6 @@ else:
                         use_container_width=True
                     )
                 except Exception as e:
-                    st.error(f"マニュアルのPDF化に失敗しました: {e}")
+                    st.error(f"PDF失敗: {e}")
         
         st.markdown('</div>', unsafe_allow_html=True)
