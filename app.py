@@ -14,10 +14,6 @@ if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
 if 'login_time' not in st.session_state:
     st.session_state.login_time = 0
-if 'preview_product' not in st.session_state:
-    st.session_state.preview_product = False
-if 'preview_manual' not in st.session_state:
-    st.session_state.preview_manual = False
 if 'display_product' not in st.session_state:
     st.session_state.display_product = None
 if 'display_manual' not in st.session_state:
@@ -25,84 +21,8 @@ if 'display_manual' not in st.session_state:
 if 'display_keyword' not in st.session_state:
     st.session_state.display_keyword = None
 
-# --- CSS切り替え（プレビュー or 通常） ---
-if st.session_state.preview_product or st.session_state.preview_manual:
-    st.markdown("""
-<style>
-/* 印刷プレビュー用CSS（UI消去・白背景・黒文字フォーカス） */
-.stApp {
-    background: #ffffff !important;
-}
-[data-testid="stSidebar"], [data-testid="stHeader"], [data-testid="stToolbar"] {
-    display: none !important;
-}
-/* コンテナの高さ制限やスクロールを完全に解除して全内容を描画させる（複数ページPDF対応の要点） */
-.block-container, .stApp, .main, div.stMarkdown, div.stVerticalBlock {
-    padding: 0 !important;
-    margin: 0 auto !important;
-    max-width: 800px !important;
-    height: auto !important;
-    overflow: visible !important;
-}
-/* すべてのテキスト要素を強制的に黒無地に */
-h1, h2, h3, h4, h5, h6, p, div, span, li, ul, ol, strong, em, b, i {
-    background: none !important;
-    -webkit-background-clip: unset !important;
-    -webkit-text-fill-color: #000000 !important;
-    color: #000000 !important;
-    text-shadow: none !important;
-}
-.card {
-    background: transparent !important;
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-    border: none !important;
-    box-shadow: none !important;
-    padding: 1rem 1.5rem !important;
-    margin: 0 !important;
-    overflow: visible !important;
-    height: auto !important;
-}
-hr {
-    border-color: #dddddd !important;
-    margin: 2rem 0 !important;
-}
-/* 戻るボタンのスタイル */
-div.stButton > button {
-    background: #f0f0f0 !important;
-    color: #333333 !important;
-    border: 1px solid #cccccc !important;
-    box-shadow: none !important;
-    padding: 0.6rem 1.2rem !important;
-    border-radius: 8px !important;
-    width: 100% !important;
-    font-size: 1.1rem !important;
-    margin-bottom: 1rem !important;
-    margin-top: 1rem !important;
-}
-/* ---------- Safari 印刷（Print）時の最適化CSS ---------- */
-@media print {
-    @page { margin: 0; }
-    body { padding: 10mm; }
-    /* ボタンや不要なUIは印刷版から完全に消す */
-    div.stButton, .stAlert { display: none !important; }
-    /* 余白やスクロール制限をリセットして最初から最後まで出力されるように */
-    .block-container, .stApp, .main, div.stMarkdown, div.stVerticalBlock, .card {
-        padding-top: 0 !important;
-        height: auto !important;
-        overflow: visible !important;
-        position: static !important;
-    }
-    /* 改ページ制御（見出しの直後や段落の途中で切れないように） */
-    h2, h3 { page-break-after: avoid; margin-top: 1.5rem !important; }
-    p, li { orphans: 3; widows: 3; }
-    /* 区切り線（hr）の前で改ページを促す */
-    hr { page-break-before: always; border: none; height: 1px; }
-}
-</style>
-""", unsafe_allow_html=True)
-else:
-    st.markdown("""
+# --- UI全体・サイドバー用のCSS ---
+st.markdown("""
 <style>
 /* --- 通常画面：ハイテクSaaSデザイン --- */
 .stApp {
@@ -162,7 +82,8 @@ div[data-baseweb="input"] input::placeholder {
 b, strong {
     color: #f1c40f !important; /* 強調を少し金色に */
 }
-/* 錬成ボタンの装飾 */
+
+/* 錬成スタート系ボタンの装飾 */
 div.stButton > button {
     background: linear-gradient(135deg, #4776E6 0%, #8E54E9 100%) !important;
     color: white !important;
@@ -179,6 +100,60 @@ div.stButton > button:hover {
     transform: translateY(-2px) !important;
     box-shadow: 0 0 25px rgba(142, 84, 233, 0.8) !important;
 }
+
+/* ----------------------------------------------------------------- */
+/* サイドバーと履歴ボタンのUI改善 (スマホ視認性UP) */
+/* ----------------------------------------------------------------- */
+/* 左上のサイドバー展開(>>)ボタンをネオン発光・拡大 */
+[data-testid="collapsedControl"] {
+    color: #0ea5e9 !important;
+    background: rgba(14, 165, 233, 0.15) !important;
+    border-radius: 50% !important;
+    box-shadow: 0 0 12px #0ea5e9, 0 0 25px #0ea5e9 !important;
+    transform: scale(1.3) !important;
+    margin-left: 12px !important;
+    margin-top: 12px !important;
+    z-index: 1000 !important;
+    transition: all 0.3s ease !important;
+}
+/* ボタンの横に「過去の履歴」文字を浮かび上がらせる */
+[data-testid="collapsedControl"]::after {
+    content: " 過去の履歴を見る";
+    font-size: 0.8rem !important;
+    font-weight: bold !important;
+    color: #0ea5e9 !important;
+    position: absolute;
+    left: 45px;
+    top: 50%;
+    transform: translateY(-50%);
+    white-space: nowrap;
+    text-shadow: 0 0 8px rgba(14, 165, 233, 0.8);
+    pointer-events: none;
+    letter-spacing: 1px;
+}
+
+/* サイドバー内の履歴ボタンをカード型にデザイン */
+[data-testid="stSidebar"] div.stButton > button {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    border-radius: 12px !important;
+    padding: 1rem !important;
+    margin-bottom: 0.8rem !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2) !important;
+    transition: all 0.3s ease !important;
+    width: 100% !important;
+    text-align: left !important;
+    display: block !important;
+    line-height: 1.4 !important;
+}
+[data-testid="stSidebar"] div.stButton > button:hover {
+    transform: translateY(-4px) !important;
+    box-shadow: 0 8px 20px rgba(0, 242, 254, 0.4) !important;
+    border-color: rgba(0, 242, 254, 0.6) !important;
+    background: rgba(255, 255, 255, 0.15) !important;
+}
+
 /* コンテンツエリア用（マークダウンを綺麗に見せる） */
 .css-1n76uvr { line-height: 1.8; }
 </style>
@@ -230,7 +205,7 @@ def load_generation(gen_id):
 
 init_db()
 
-# --- HTMLファイル出力機能 ---
+# --- HTMLファイル出力機能 (複数ページ・印刷最適化) ---
 def create_html(title, text):
     html_content = text.replace('\n', '<br>')
     html = f"""<!DOCTYPE html>
@@ -244,15 +219,41 @@ def create_html(title, text):
             font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
             padding: 20px;
             line-height: 1.8;
-            color: #333;
+            color: #111111;
             max-width: 800px;
             margin: 0 auto;
-            background-color: #fcfcfc;
+            background-color: #ffffff;
+            word-wrap: break-word; /* 印刷時の文字切れを防ぐ */
+            overflow-wrap: break-word;
         }}
-        h1, h2, h3 {{ color: #1a1a1a; border-bottom: 2px solid #eaeaea; padding-bottom: 8px; margin-top: 24px; }}
-        .container {{ background: #ffffff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }}
+        h1, h2, h3 {{ 
+            color: #000000; 
+            border-bottom: 2px solid #eaeaea; 
+            padding-bottom: 8px; 
+            margin-top: 28px; 
+            page-break-after: avoid; 
+        }}
+        .container {{ 
+            background: #ffffff; 
+            padding: 30px; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05); 
+        }}
+        hr {{
+            border: 0;
+            border-top: 1px solid #ddd;
+            margin: 20px 0;
+            page-break-before: always;
+        }}
         @media print {{
-            body, .container {{ background-color: transparent !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; color: #000000 !important; }}
+            body, .container {{ 
+                background-color: transparent !important; 
+                box-shadow: none !important; 
+                padding: 0 !important; 
+                margin: 0 !important; 
+                color: #000000 !important;
+            }}
+            p, li {{ orphans: 3; widows: 3; }}
         }}
     </style>
 </head>
@@ -268,8 +269,6 @@ current_time = time.time()
 if st.session_state.logged_in and (current_time - st.session_state.login_time > 3600):
     st.session_state.logged_in = False
     st.session_state.login_time = 0
-    st.session_state.preview_product = False
-    st.session_state.preview_manual = False
     st.warning("セッションがタイムアウトしました。再度ログインしてください。")
 
 # ------------------------------------------------
@@ -289,32 +288,6 @@ if not st.session_state.logged_in:
             st.error("パスワードが間違っています。")
     st.markdown('</div>', unsafe_allow_html=True)
 
-elif st.session_state.preview_product:
-    # 商品ページ専用プレビュー
-    if st.button("← 編集画面に戻る"):
-        st.session_state.preview_product = False
-        st.rerun()
-        
-    st.info("💡 Safariの方は、下部の「共有ボタン」→「プリント」を押すと、綺麗なPDFとして保存できます。")
-    
-    st.markdown('<div class="card">', unsafe_allow_html=True)
-    st.markdown(f"<h2>【商品ページ】{st.session_state.display_keyword}</h2>", unsafe_allow_html=True)
-    st.markdown(st.session_state.display_product)
-    st.markdown('</div>', unsafe_allow_html=True)
-
-elif st.session_state.preview_manual:
-    # マニュアル専用プレビュー
-    if st.button("← 編集画面に戻る"):
-        st.session_state.preview_manual = False
-        st.rerun()
-        
-    st.info("💡 Safariの方は、下部の「共有ボタン」→「プリント」を押すと、綺麗なPDFとして保存できます。")
-    
-    st.markdown('<div class="card">', unsafe_allow_html=True)
-    st.markdown(f"<h2>【マニュアル】{st.session_state.display_keyword}</h2>", unsafe_allow_html=True)
-    st.markdown(st.session_state.display_manual)
-    st.markdown('</div>', unsafe_allow_html=True)
-
 else:
     # ------------------------------------------------
     # 通常のメイン画面（編集・生成用）
@@ -332,42 +305,64 @@ else:
 
     st.markdown("<h1>AI自動コンテンツ錬成システム</h1>", unsafe_allow_html=True)
     
-    # 使い方ガイド（メイン画面トップに常設）
-    with st.expander("📘 システムの使い方（履歴の活用）"):
+    # --- 使い方・保存ガイドの常設 ---
+    with st.expander("📘 はじめての方へ：使い方の流れ", expanded=True):
         st.markdown("""
-        - 錬成した「商品ページ」や「マニュアル」は、左上の**「過去の錬成履歴」に自動で保存**されます。
-        - 履歴のボタンを押せば、いつ開いても同じ内容を一瞬で復元可能です。間違って画面を閉じても安心です。
+        1. 下記のフォームに **Gemini APIキー** と **リサーチしたいジャンル** を入力して「錬成スタート」を押してください。
+        2. しばらく待つと、売れる商品ページとマニュアルが全自動で生成されます。
+        3. 生成された内容は左側の左上の「>> （過去の履歴）」ボタンから開ける **「過去の錬成履歴」タブに自動保存** され、いつでも再表示できます。
         """)
-    with st.expander("📱 スマホでのPDF保存方法（Safari推奨）"):
+        
+    with st.expander("📱 重要：スマホでのPDF保存方法", expanded=True):
         st.markdown("""
         **【iPhone/Safariの場合】**
-        1. 錬成完了後、上部の**「📱 プレビューを表示」**ボタンを押す
-        2. 白背景の専用画面になったら、画面下部の **共有（□から↑矢印が出ているアイコン）** をタップ
-        3. メニューを下へスクロールし **「プリント」** をタップ
-        4. オプション画面が開くので、右上の **「プリント」 または プレビュー画像を二本指で拡大（ピンチアウト）** する
-        5. さらに共有ボタンを押して **「ファイルに保存」** などを選べば、美しい複数ページPDFとして保存完了！
+        1. 錬成完了後、上部の **「📥 HTML形式で保存」** ボタンを押してファイルをダウンロード。
+        2. ダウンロードしたファイルを開き、Safari下部の **共有ボタン（□から↑矢印が出ているアイコン）** をタップ。
+        3. メニューを下へスクロールし **「プリント」** を選択。
+        4. プリントプレビュー画面が表示されたら、そのプレビュー画像を **【二本指でピンチアウト（拡大）】** してください！
+        5. 魔法のように1つのきれいな複数ページPDFに変換されます。そのまま「ファイルに保存」等で保存してください。
         """)
 
+    # 履歴への誘導ボタン（メイン画面内）
+    if st.button("🗂️ 過去の作成履歴を見る（左メニュー）"):
+        st.info("💡 画面左上の青く光る「>> （過去の履歴を見る）」ボタンをタップして、サイドバーを開いてください。")
+
+    # 履歴呼び出し処理
     if selected_record_id:
         row = load_generation(selected_record_id)
         if row:
             st.session_state.display_product, st.session_state.display_manual = row
             st.session_state.display_keyword = next((rec[2] for rec in history_records if rec[0] == selected_record_id), "不明")
-            st.info(f"履歴を復元しました: 『{st.session_state.display_keyword}』")
+            st.success(f"🗂️ 履歴を復元しました: 『{st.session_state.display_keyword}』")
 
-    # 結果がある場合、最上部（入力フォームの上）にプレビュー・保存ボタンを大々的に表示
+    # 結果がある場合、最上部（入力フォームの上）にHTML保存ボタンを大々的に表示
     if st.session_state.display_product and st.session_state.display_manual:
         st.markdown("---")
-        st.markdown("<h3 style='text-align:center;'>📱 プリント保存用プレビュー</h3>", unsafe_allow_html=True)
+        st.markdown("<h3 style='text-align:center;'>📱 スマホでPDF化するための保存ボタン</h3>", unsafe_allow_html=True)
+        st.info("☝️ 上記の「スマホでのPDF保存方法」に従って、HTMLをダウンロードしてからSafariでPDF化してください。")
+        
+        sanitized_genre = re.sub(r'[\\/:*?"<>| ]', '_', st.session_state.display_keyword)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        product_html_bytes = create_html(f"【出品ページ】{st.session_state.display_keyword}", st.session_state.display_product)
+        manual_html_bytes = create_html(f"【マニュアル】{st.session_state.display_keyword}", st.session_state.display_manual)
+        
         colA, colB = st.columns(2)
         with colA:
-            if st.button("📄 商品ページを表示\n(保存用)", key="btn_top_preview_prod"):
-                st.session_state.preview_product = True
-                st.rerun()
+            st.download_button(
+                label="📥 商品ページを保存 (HTML)",
+                data=product_html_bytes,
+                file_name=f"{sanitized_genre}_product_page_{timestamp}.html",
+                mime="text/html",
+                use_container_width=True
+            )
         with colB:
-            if st.button("📗 マニュアルを表示\n(保存用)", key="btn_top_preview_manu"):
-                st.session_state.preview_manual = True
-                st.rerun()
+            st.download_button(
+                label="📥 マニュアルを保存 (HTML)",
+                data=manual_html_bytes,
+                file_name=f"{sanitized_genre}_manual_{timestamp}.html",
+                mime="text/html",
+                use_container_width=True
+            )
         st.markdown("---")
 
     # 入力フォーム
@@ -434,7 +429,7 @@ else:
                     st.session_state.display_manual = manual_content
                     st.session_state.display_keyword = genre_keyword
 
-                    st.success("✅ 錬成が完了し、履歴に保存されました！上のプレビューボタンから結果を確認できます。")
+                    st.success("✅ 錬成が完了し、履歴に保存されました！上のHTML保存ボタンから出力ファイルをダウンロードしてください。")
                     
                     time.sleep(1)
                     st.rerun()
@@ -442,7 +437,7 @@ else:
                 except Exception as e:
                     st.error(f"エラーが発生しました: 今回入力したAPIキーが正しいか、ネットワーク状況をご確認ください。\n({str(e)})")
 
-    # 結果のプレビューカード（通常画面の下部にも念のため表示）
+    # 結果の内容表示
     if st.session_state.display_product and st.session_state.display_manual and st.session_state.display_keyword:
         st.markdown('<div class="card">', unsafe_allow_html=True)
         st.markdown("## 📄 商品ページ")
@@ -454,49 +449,25 @@ else:
         st.markdown(st.session_state.display_manual)
         st.markdown('</div>', unsafe_allow_html=True)
 
-        # ファイル名用のサニタイズ
-        sanitized_genre = re.sub(r'[\\/:*?"<>| ]', '_', st.session_state.display_keyword)
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-
+        # パソコン用 Markdown保存ダウンローダー (一番下に配置)
         st.markdown('<div class="card">', unsafe_allow_html=True)
-        st.markdown("### 💾 ダウンロード（PC・代替用）")
+        st.markdown("### 💻 パソコン用ダウンロード (Markdown)")
         
-        product_html_bytes = create_html(f"【出品ページ】{st.session_state.display_keyword}", st.session_state.display_product)
-        manual_html_bytes = create_html(f"【マニュアル】{st.session_state.display_keyword}", st.session_state.display_manual)
-
         col1, col2 = st.columns(2)
         with col1:
-            st.markdown("<div style='text-align: center; margin-bottom: 10px;'><b>💻 PC向け (Markdown)</b></div>", unsafe_allow_html=True)
             st.download_button(
-                label="🛒 商品 [.md]",
+                label="🛒 商品ページ [.md]",
                 data=st.session_state.display_product,
                 file_name=f"{sanitized_genre}_product_page_{timestamp}.md",
                 mime="text/markdown",
                 use_container_width=True
             )
+        with col2:
             st.download_button(
-                label="📘 マニ [.md]",
+                label="📘 マニュアル [.md]",
                 data=st.session_state.display_manual,
                 file_name=f"{sanitized_genre}_manual_{timestamp}.md",
                 mime="text/markdown",
                 use_container_width=True
             )
-            
-        with col2:
-            st.markdown("<div style='text-align: center; margin-bottom: 10px;'><b>📱 HTMLによる保存</b></div>", unsafe_allow_html=True)
-            st.download_button(
-                label="🌐 商品 [.html]",
-                data=product_html_bytes,
-                file_name=f"{sanitized_genre}_product_page_{timestamp}.html",
-                mime="text/html",
-                use_container_width=True
-            )
-            st.download_button(
-                label="🌐 マニ [.html]",
-                data=manual_html_bytes,
-                file_name=f"{sanitized_genre}_manual_{timestamp}.html",
-                mime="text/html",
-                use_container_width=True
-            )
-        
         st.markdown('</div>', unsafe_allow_html=True)
