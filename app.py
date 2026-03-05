@@ -222,50 +222,33 @@ div[data-testid="stDownloadButton"] button:hover {
 """, unsafe_allow_html=True)
 
 
-# --- DB初期化 ---
-DB_PATH = "history.db"
+# --- 履歴の初期化 ---
+if 'history_records' not in st.session_state:
+    st.session_state.history_records = []
 
-def init_db():
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS generations (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            timestamp TEXT,
-            genre_keyword TEXT,
-            product_text TEXT,
-            manual_text TEXT
-        )
-    ''')
-    conn.commit()
-    conn.close()
-
-def save_to_db(genre_keyword, product_text, manual_text):
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
+def save_to_state(genre_keyword, product_text, manual_text):
     timestamp = datetime.now().strftime("%Y/%m/%d %H:%M:%S")
-    c.execute('INSERT INTO generations (timestamp, genre_keyword, product_text, manual_text) VALUES (?, ?, ?, ?)',
-              (timestamp, genre_keyword, product_text, manual_text))
-    conn.commit()
-    conn.close()
+    record_id = len(st.session_state.history_records) + 1
+    # st.session_stateに直接保存する（ユーザーのセッション内でのみ保持）
+    st.session_state.history_records.append({
+        'id': record_id,
+        'timestamp': timestamp,
+        'genre_keyword': genre_keyword,
+        'product_text': product_text,
+        'manual_text': manual_text
+    })
 
 def load_history():
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute('SELECT id, timestamp, genre_keyword FROM generations ORDER BY id DESC')
-    rows = c.fetchall()
-    conn.close()
-    return rows
+    # 降順で表示用にリストを成形
+    records = reversed(st.session_state.history_records)
+    return [(r['id'], r['timestamp'], r['genre_keyword']) for r in records]
 
 def load_generation(gen_id):
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute('SELECT product_text, manual_text FROM generations WHERE id = ?', (gen_id,))
-    row = c.fetchone()
-    conn.close()
-    return row
-
-init_db()
+    # IDからデータを検索
+    for r in st.session_state.history_records:
+        if r['id'] == gen_id:
+            return (r['product_text'], r['manual_text'])
+    return None
 
 # --- HTMLファイル出力機能 (複数ページ・印刷最適化) ---
 def create_html(title, text):
@@ -383,6 +366,14 @@ else:
         3. メニューを下へスクロールし **「プリント」** を選択。
         4. プリントプレビュー画面が表示されたら、そのプレビュー画像を **【二本指でピンチアウト（拡大）】** してください！
         5. 魔法のように1つのきれいな複数ページPDFに変換されます。そのまま「ファイルに保存」等で保存してください。
+        
+        🤖 **Androidの場合（Chrome推奨）**
+        1. 「HTML形式で保存」ボタンを押してファイルをダウンロード。
+        2. ダウンロードしたファイルを開く（Chromeブラウザ推奨）。
+        3. 画面右上の「︙（3つの点）」メニューをタップ。
+        4. 「共有」 ＞ 「印刷」の順に選択。
+        5. 画面上部のプリンタ選択欄をタップし、「PDF形式で保存」を選択。
+        6. 右側に表示される「PDF」の丸いボタンをタップして保存完了！
         """)
 
     # 履歴への誘導ボタン（メイン画面内）
@@ -484,7 +475,7 @@ else:
                     manual_prompt = f"以下の商品内容に沿った、購入者が満足する実践的なノウハウマニュアルをMarkdown形式で詳しく執筆してください。\n\n商品内容:\n{product_package}"
                     manual_content = model.generate_content(manual_prompt).text
                     
-                    save_to_db(genre_keyword, product_package, manual_content)
+                    save_to_state(genre_keyword, product_package, manual_content)
 
                     # 表示変数にセット
                     st.session_state.display_product = product_package
