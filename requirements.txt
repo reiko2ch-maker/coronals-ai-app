@@ -3,3 +3,4 @@ google-generativeai
 python-dotenv
 fpdf2
 requests
+supabase==2.3.0
