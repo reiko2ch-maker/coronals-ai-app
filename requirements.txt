@@ -4,3 +4,4 @@ python-dotenv
 fpdf2
 requests
 supabase==2.3.0
+httpx==0.27.2
