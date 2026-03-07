@@ -39,7 +39,7 @@ st.markdown("""
 <style>
 /* --- 通常画面：ハイテクSaaSデザイン --- */
 .stApp {
-    background: linear-gradient(135deg, #0f172a 0%, #000000 100%);
+    background: linear-gradient(135deg, #09090b 0%, #171720 100%);
     color: #ffffff;
 }
 .block-container {
@@ -55,19 +55,20 @@ h1 {
     text-align: center;
     margin-bottom: 2rem !important;
     text-shadow: 0 0 10px rgba(0, 242, 254, 0.4);
+    letter-spacing: 2px;
 }
 h2, h3 {
     color: #00f2fe !important;
     text-shadow: 0 0 8px rgba(0, 242, 254, 0.3);
 }
 .card {
-    background: rgba(255, 255, 255, 0.08);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 16px;
     padding: 2.5rem;
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    box-shadow: 0 16px 32px rgba(0, 0, 0, 0.5);
     margin-bottom: 2rem;
     color: #ffffff;
 }
@@ -78,9 +79,15 @@ h2, h3 {
     text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
 }
 div[data-baseweb="input"] {
-    background-color: rgba(0, 0, 0, 0.2) !important;
+    background-color: rgba(255, 255, 255, 0.03) !important;
     border-radius: 8px !important;
-    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    transition: all 0.3s ease;
+}
+div[data-baseweb="input"]:focus-within, div[data-baseweb="input"]:hover {
+    border-color: #a855f7 !important;
+    box-shadow: 0 0 15px rgba(168, 85, 247, 0.4) !important;
+    background-color: rgba(255, 255, 255, 0.08) !important;
 }
 div[data-baseweb="input"] input {
     color: #ffffff !important;
@@ -339,7 +346,9 @@ if st.session_state.logged_in and (current_time - st.session_state.login_time > 
 # ------------------------------------------------
 if not st.session_state.logged_in:
     # ログイン画面
-    st.markdown("<h1>System Login</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='margin-bottom: 0.5rem !important; font-size: 4rem; text-shadow: 0 0 20px rgba(0, 242, 254, 0.6);'>LUCIFER</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; color: #a1a1aa; font-size: 1.2rem; margin-bottom: 3rem; letter-spacing: 2px;'>AI Auto Content Generation System</p>", unsafe_allow_html=True)
+    
     st.markdown('<div class="card">', unsafe_allow_html=True)
     password = st.text_input("シリアルキーを入力してログイン", type="password", placeholder="例：LUCIFER-001")
     if st.button("ログイン"):
@@ -351,6 +360,19 @@ if not st.session_state.logged_in:
         else:
             st.error("シリアルキーを入力してください。")
     st.markdown('</div>', unsafe_allow_html=True)
+    
+    # リリースノート (アップデート履歴)
+    st.markdown("""
+    <div class="card" style="padding: 2rem; margin-top: 1rem;">
+        <h3 style="margin-top: 0; text-align: center; border-bottom: none; color: #a855f7 !important; text-shadow: 0 0 10px rgba(168, 85, 247, 0.4);"><span style="font-size: 1.2rem;">✨</span> Release Notes</h3>
+        <ul style="list-style-type: none; padding: 0; margin-top: 1.5rem; color: #d4d4d8; font-size: 0.95rem;">
+            <li style="margin-bottom: 12px; border-left: 3px solid #00f2fe; padding-left: 15px;"><strong style="color: #00f2fe !important;">2026.03.08</strong> | クラウドデータベース(Supabase)連携による個別ユーザー履歴の永久保存機能を実装</li>
+            <li style="margin-bottom: 12px; border-left: 3px solid #a855f7; padding-left: 15px;"><strong style="color: #a855f7 !important;">2026.03.08</strong> | Android/iOS向け PDFワンタップ保存ガイドをシステム内に統合</li>
+            <li style="margin-bottom: 12px; border-left: 3px solid #a855f7; padding-left: 15px;"><strong style="color: #a855f7 !important;">2026.03.08</strong> | システムUI/UXをSaaS仕様のハイエンドデザインへフルリニューアル</li>
+            <li style="margin-bottom: 0px; border-left: 3px solid #71717a; padding-left: 15px;"><strong style="color: #a1a1aa !important;">2026.03.07</strong> | AI錬成エンジン（Gemini 2.5 Flash）の最適化およびプロンプト調整</li>
+        </ul>
+    </div>
+    """, unsafe_allow_html=True)
 
 else:
     # ------------------------------------------------
