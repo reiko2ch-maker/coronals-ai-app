@@ -4,6 +4,9 @@ import time
 import sqlite3
 import google.generativeai as genai
 from datetime import datetime
+import streamlit as st
+
+# Streamlitインポートの【後】にSupabaseの処理を書く
 from supabase import create_client, Client
 
 @st.cache_resource
@@ -17,8 +20,6 @@ try:
 except Exception as e:
     st.error(f"データベース接続エラー: 金庫(Secrets)の設定を確認してください。詳細: {e}")
     supabase = None
-
-# --- UIカスタマイズ設定 ---
 st.set_page_config(page_title="AI自動コンテンツ錬成システム", layout="centered", page_icon="✨")
 
 # --- セッション状態の初期化 ---
