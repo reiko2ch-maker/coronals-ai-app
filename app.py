@@ -4,16 +4,18 @@ import time
 import sqlite3
 import google.generativeai as genai
 from datetime import datetime
-import streamlit as st
 from supabase import create_client, Client
 
-from supabase import create_client, Client
+@st.cache_resource
+def init_connection():
+    url = st.secrets["SUPABASE_URL"]
+    key = st.secrets["SUPABASE_KEY"]
+    return create_client(url, key)
 
 try:
-    url: str = st.secrets["SUPABASE_URL"]
-    key: str = st.secrets["SUPABASE_KEY"]
-    supabase: Client = create_client(url, key)
+    supabase = init_connection()
 except Exception as e:
+    st.error(f"データベース接続エラー: 金庫(Secrets)の設定を確認してください。詳細: {e}")
     supabase = None
 
 # --- UIカスタマイズ設定 ---
