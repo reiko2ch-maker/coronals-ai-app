@@ -234,26 +234,36 @@ div[data-testid="stDownloadButton"] button:hover {
 
 # --- 履歴操作ロジック ---
 def save_to_state(genre_keyword, product_text, manual_text):
-    if supabase:
-        try:
-            supabase.table('history_records').insert({
-                'user_key': st.session_state.user_key,
-                'keyword': genre_keyword,
-                'product_text': product_text,
-                'manual_text': manual_text
-            }).execute()
-        except Exception as e:
-            st.error(f"データベースの保存に失敗しました: {e}")
+    if "user_key" not in st.session_state or not st.session_state.user_key:
+        return
+    try:
+        supabase.table("history_records").insert({
+            "user_key": st.session_state.user_key,
+            "keyword": genre_keyword,
+            "product_text": product_text,
+            "manual_text": manual_text
+        }).execute()
+    except Exception as e:
+        st.error(f"履歴の保存に失敗しました: {e}")
 
 def load_history():
-    if supabase and 'user_key' in st.session_state:
-        try:
-            response = supabase.table('history_records').select('*').eq('user_key', st.session_state.user_key).order('created_at', desc=True).execute()
-            # (id, created_at, keyword, product_text, manual_text) のタプルリストを返す
-            return [(r['id'], r['created_at'].split('T')[0] + " " + r['created_at'].split('T')[1][:8], r['keyword'], r['product_text'], r['manual_text']) for r in response.data]
-        except Exception as e:
-            pass
-    return []
+    if "user_key" not in st.session_state or not st.session_state.user_key:
+        return []
+    try:
+        response = supabase.table("history_records").select("id, created_at, keyword").eq("user_key", st.session_state.user_key).order("created_at", desc=True).execute()
+        return [(r['id'], r['created_at'], r['keyword']) for r in response.data]
+    except Exception as e:
+        st.error(f"履歴の読み込みに失敗しました: {e}")
+        return []
+
+def load_generation(gen_id):
+    try:
+        response = supabase.table("history_records").select("product_text, manual_text").eq("id", gen_id).execute()
+        if response.data:
+            return (response.data[0]['product_text'], response.data[0]['manual_text'])
+    except Exception as e:
+        pass
+    return None
 
 # --- HTMLファイル出力機能 (複数ページ・印刷最適化) ---
 def create_html(title, text):
@@ -346,12 +356,11 @@ else:
     st.sidebar.title("📚 過去の錬成履歴")
     history_records = load_history()
     
-    selected_record = None
+    selected_record_id = None
     if history_records:
-        for record in history_records:
-            rec_id, timestamp, kw, p_text, m_text = record
-            if st.sidebar.button(f"✨ {kw}\n({timestamp})", key=f"hist_{rec_id}"):
-                selected_record = record
+        for record_id, timestamp, kw in history_records:
+            if st.sidebar.button(f"✨ {kw}\n({timestamp})", key=f"hist_{record_id}"):
+                selected_record_id = record_id
     else:
         st.sidebar.info("履歴はまだありません。")
 
@@ -388,12 +397,12 @@ else:
         st.info("💡 画面左上の青く光る「>> （過去の履歴を見る）」ボタンをタップして、サイドバーを開いてください。")
 
     # 履歴呼び出し処理
-    if selected_record:
-        rec_id, timestamp, kw, p_text, m_text = selected_record
-        st.session_state.display_product = p_text
-        st.session_state.display_manual = m_text
-        st.session_state.display_keyword = kw
-        st.success(f"🗂️ 履歴を復元しました: 『{kw}』")
+    if selected_record_id:
+        row = load_generation(selected_record_id)
+        if row:
+            st.session_state.display_product, st.session_state.display_manual = row
+            st.session_state.display_keyword = next((rec[2] for rec in history_records if rec[0] == selected_record_id), "不明")
+            st.success(f"🗂️ 履歴を復元しました: 『{st.session_state.display_keyword}』")
 
     # 結果がある場合、最上部（入力フォームの上）にHTML保存ボタンを大々的に表示
     if st.session_state.display_product and st.session_state.display_manual:
